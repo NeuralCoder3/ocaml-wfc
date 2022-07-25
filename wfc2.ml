@@ -3,9 +3,80 @@
 
 let comp = compare;;
 let (<<) f g x = f(g(x))
+let (++) = String.cat
+
+let explode s = List.init (String.length s) (String.get s)
+let implode xs = String.of_seq (List.to_seq xs)
+
 open List;;
 
 let _ = Random.self_init ()
+
+type 'a board = 'a list list
+
+let updateList xs index value =
+    mapi (fun i v -> if i=index then value else v) xs
+
+let updateBoard board (x,y) value =
+    updateList board y (updateList (nth board y) x value)
+
+let apply f xs =
+    let _ = map (fun x -> f x) xs in ()
+
+let boardMap f board =
+    map 
+        (fun row -> map (fun x -> f x) row)
+    board
+
+let boardPrinter board =
+    apply 
+        (fun row ->
+            apply (Printf.printf "%s ") row;
+            Printf.printf "\n"
+        )
+        board;
+    Printf.printf "\n"
+
+let boardLenPrinter b = (boardPrinter << (boardMap (Int.to_string << length))) b
+
+let stringBoardBoardToString b = 
+    let h = length b in
+    let w = length (nth b 0) in
+    let block0 = nth (nth b 0) 0 in
+    let ih = length block0 in
+    let iw = length (nth block0 0) in
+
+    let oh = h * ih in
+    let ow = w * iw in
+
+    (* let out = Array.init oh (fun _ -> Array.init ow (fun _ -> " ")) in *)
+    let out = Array.make_matrix oh ow ' ' in
+    let _ = mapi 
+    (fun y row ->
+        mapi 
+        (fun x ib ->
+            mapi 
+            (fun iy irow ->
+                mapi 
+                (fun ix c ->
+                    out.(y*ih+iy).(x*iw+ix) <- c
+                )
+                irow
+            )
+            ib
+        )
+        row
+    )
+    b in
+    out
+    |> Array.to_list
+    |> map Array.to_list
+    |> map implode
+
+
+
+
+
 
 (* type 'id 'data 'info graph
     = ('id * 'data) list * ('id * 'id * 'info) list *)
@@ -17,7 +88,25 @@ type ('id,'data,'info) graph =
     { nodes : (('id,'data) node) list;  
       edges : (('id,'info) edge) list }
 
-let _ = print_endline "Test"
+let printGraph dataToString idToString infoToString graph =
+    let nodes = graph.nodes in
+    let edges = graph.edges in
+    let printNode node =
+        Printf.sprintf "%s: %s" (idToString node.id) (dataToString node.data) in
+    let printEdge edge =
+        Printf.sprintf "%s -> %s: %s" (idToString edge.fst) (idToString edge.snd) (infoToString edge.info) in
+    let printNodes =
+        map printNode nodes in
+    let printEdges =
+        map printEdge edges in
+    let print =
+        [Printf.sprintf "nodes:"] @
+        printNodes @
+        [Printf.sprintf "edges:"] @
+        printEdges 
+    in
+    print
+    |> apply (Printf.printf "%s\n")
 
 
 let getNode graph id =
@@ -230,6 +319,29 @@ let computeBoard debug side options (w,h) =
 
 
 (*
+   rotated tiles
+*)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(*
    concrete test
    TODO: group from here on
 *)
@@ -254,54 +366,8 @@ let side t dir =
     | RIGHTTile,RIGHT -> EmptySide
     | _,_ -> TrackSide
 
-let apply f xs =
-    let _ = map (fun x -> f x) xs in ()
 
-let boardMap f board =
-    map 
-        (fun row -> map (fun x -> f x) row)
-    board
-
-let boardPrinter board =
-    apply 
-        (fun row ->
-            apply (Printf.printf "%s ") row;
-            Printf.printf "\n"
-        )
-        board;
-    Printf.printf "\n"
-
-let boardLenPrinter b = (boardPrinter << (boardMap (Int.to_string << length))) b
-
-let tileOptions = [UPTile;DOWNTile;LEFTTile;RIGHTTile]
-
-
-
-
-
-
-
-let printGraph dataToString idToString infoToString graph =
-    let nodes = graph.nodes in
-    let edges = graph.edges in
-    let printNode node =
-        Printf.sprintf "%s: %s" (idToString node.id) (dataToString node.data) in
-    let printEdge edge =
-        Printf.sprintf "%s -> %s: %s" (idToString edge.fst) (idToString edge.snd) (infoToString edge.info) in
-    let printNodes =
-        map printNode nodes in
-    let printEdges =
-        map printEdge edges in
-    let print =
-        [Printf.sprintf "nodes:"] @
-        printNodes @
-        [Printf.sprintf "edges:"] @
-        printEdges 
-    in
-    print
-    |> apply (Printf.printf "%s\n")
-
-let (++) = String.cat
+let tileOptions = [UPTile;DOWNTile;LEFTTile;RIGHTTile;Empty]
 
 let superPosPrinter dataPrinter data =
     "[" ++
@@ -326,12 +392,6 @@ let tilePrinter tile =
     | Empty -> "Empty"
 
 
-let updateList xs index value =
-    mapi (fun i v -> if i=index then value else v) xs
-
-let updateBoard board (x,y) value =
-    updateList board y (updateList (nth board y) x value)
-
 let initBoard =
     let board = List.init 3 (fun _ -> List.init 3 (fun _ -> tileOptions)) in
     (* updateBoard board (0,0) [Empty] *)
@@ -353,7 +413,7 @@ let _ = printGraph (superPosPrinter tilePrinter) pairPrint dirPrinter initGraph 
 let _ = boardPrinter (boardFromGraph g2) *)
 
 
-let gE = computeBoard boardLenPrinter side tileOptions (10,10)
+let gE = computeBoard boardLenPrinter side tileOptions (100,100)
 (* let _ = match gE with
     | Some g -> boardPrinter (map (map (fun a -> [a])) g)
     | None -> Printf.printf "None\n" *)
@@ -367,28 +427,25 @@ let tileToString tile =
     | Empty -> " "
 
 
-let explode s = List.init (String.length s) (String.get s)
-let implode xs = String.of_seq (List.to_seq xs)
-
 let tileToStringBoard tile =
     map explode
     (match tile with
     | UPTile -> 
         ["   ";
-         "===";
+         "---";
          " | "
          ]
     | DOWNTile -> 
         [" | ";
-         "===";
+         "---";
          "   "]
     | LEFTTile -> 
         [" | ";
-         " |=";
+         " |-";
          " | "]
     | RIGHTTile -> 
         [" | ";
-         "=| ";
+         "-| ";
          " | "]
     | Empty -> 
         ["   ";
@@ -422,41 +479,6 @@ let tileToStringBoard tile =
 
 *)
 
-let stringBoardBoardToString b = 
-    let h = length b in
-    let w = length (nth b 0) in
-    let block0 = nth (nth b 0) 0 in
-    let ih = length block0 in
-    let iw = length (nth block0 0) in
-
-    let oh = h * ih in
-    let ow = w * iw in
-
-    (* let out = Array.init oh (fun _ -> Array.init ow (fun _ -> " ")) in *)
-    let out = Array.make_matrix oh ow ' ' in
-    let _ = mapi 
-    (fun y row ->
-        mapi 
-        (fun x ib ->
-            mapi 
-            (fun iy irow ->
-                mapi 
-                (fun ix c ->
-                    out.(y*ih+iy).(x*iw+ix) <- c
-                )
-                irow
-            )
-            ib
-        )
-        row
-    )
-    b in
-    out
-    |> Array.to_list
-    |> map Array.to_list
-    |> map implode
-
-
 let _ = match gE with 
         | None -> ()
         | Some b -> 
@@ -466,9 +488,13 @@ let _ = match gE with
             |> Printf.printf "%s\n"
 
 (*
-   rotated tiles
+   SMT
+   node = formula
+   connection = shared vars
+   [v] => if contain v then [v] else filter (!= not v)
+   maybe need adjustment of superpos compare/restrict
 *)
 
 (*
-   SMT
+   Sudoku
 *)
