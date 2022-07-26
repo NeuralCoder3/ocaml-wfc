@@ -8,6 +8,8 @@ let (++) = String.cat
 let explode s = List.init (String.length s) (String.get s)
 let implode xs = String.of_seq (List.to_seq xs)
 
+;;
+#use "Image.ml";;
 open List;;
 
 let _ = Random.self_init ()
@@ -23,10 +25,15 @@ let updateBoard board (x,y) value =
 let apply f xs =
     let _ = map (fun x -> f x) xs in ()
 
+let boardMapi f board =
+    mapi (fun y ->
+        mapi (fun x ->
+            f (x,y)
+        )
+    ) board
+
 let boardMap f board =
-    map 
-        (fun row -> map (fun x -> f x) row)
-    board
+    boardMapi (fun _ -> f) board
 
 let boardPrinter board =
     apply 
@@ -39,39 +46,28 @@ let boardPrinter board =
 
 let boardLenPrinter b = (boardPrinter << (boardMap (Int.to_string << length))) b
 
-let stringBoardBoardToString b = 
-    let h = length b in
-    let w = length (nth b 0) in
-    let block0 = nth (nth b 0) 0 in
-    let ih = length block0 in
-    let iw = length (nth block0 0) in
-
-    let oh = h * ih in
-    let ow = w * iw in
-
-    (* let out = Array.init oh (fun _ -> Array.init ow (fun _ -> " ")) in *)
-    let out = Array.make_matrix oh ow ' ' in
-    let _ = mapi 
-    (fun y row ->
-        mapi 
-        (fun x ib ->
-            mapi 
-            (fun iy irow ->
-                mapi 
-                (fun ix c ->
-                    out.(y*ih+iy).(x*iw+ix) <- c
-                )
-                irow
-            )
-            ib
+let connect_lines xs =
+    rev(snd(List.fold_left
+    (fun (ys,acc) _ ->
+        (map tl ys,
+        List.concat (map hd ys)::
+        acc
         )
-        row
     )
-    b in
-    out
-    |> Array.to_list
-    |> map Array.to_list
-    |> map implode
+    (xs,[])
+    (hd xs)
+    ))
+
+let board_render_2d_tile render_tile board =
+    board
+    |> boardMapi (fun _ -> render_tile)
+    |> map (fun xs -> connect_lines xs)
+    |> concat
+
+(* let stringBoardBoardToString board =
+    board
+    |> map (fun xs -> map implode (connect_lines xs))
+    |> map (String.concat "\n") *)
 
 
 
@@ -243,11 +239,24 @@ let determineSuperposition compatible debug graph =
     determine impossible finished (restrict compatible) collectOptions debug graph
     |> optionMap extractSolution
 
+let superPosPrinter dataPrinter data =
+    "[" ++
+    String.concat ", " (map dataPrinter data) ++
+    "]"
+
+
 (* specialization:
    graph = 2d board
 *)
 
 type direction = LEFT | RIGHT | UP | DOWN
+
+let dirPrinter dir =
+    match dir with
+    | LEFT -> "LEFT"
+    | RIGHT -> "RIGHT"
+    | UP -> "UP"
+    | DOWN -> "DOWN"
 
 let idFromCoordinates x y = (x,y)
 (* let getId x y = Printf.sprintf "%d_%d" x y in *)
@@ -322,8 +331,36 @@ let computeBoard debug side options (w,h) =
    rotated tiles
 *)
 
+type 'a rot_tile = 'a * int
+
+let rotate s =
+    match s with
+    | UP -> RIGHT
+    | RIGHT -> DOWN
+    | DOWN -> LEFT
+    | LEFT -> UP
+
+let rec get_rot_side get_side (t,r) s =
+    match r with
+    | 0 -> get_side t s
+    | _ -> get_rot_side get_side (t,(r+1) mod 4) (rotate s)
 
 
+
+
+let rotate_board xs =
+    let h = List.length xs in
+    let w = List.length (nth xs 0) in
+    List.init w
+        (fun y -> List.init h
+            (fun x -> nth (nth xs (h-1-x)) y))
+
+let rec render_rot_tile render (t,r) =
+    match r with 
+    | 0 -> render t
+    | _ ->
+        let s = render_rot_tile render (t,r-1) in
+        rotate_board s
 
 
 
@@ -347,11 +384,8 @@ let computeBoard debug side options (w,h) =
 *)
 
 type tiles = 
-    | Empty
-    | UPTile
-    | DOWNTile
-    | LEFTTile
-    | RIGHTTile
+    | EmptyTile
+    | RailTile
 
 type sides = 
     | EmptySide
@@ -359,37 +393,24 @@ type sides =
 
 let side t dir =
     match t,dir with
-    | Empty,_ -> EmptySide
-    | UPTile,UP -> EmptySide
-    | DOWNTile,DOWN -> EmptySide
-    | LEFTTile,LEFT -> EmptySide
-    | RIGHTTile,RIGHT -> EmptySide
-    | _,_ -> TrackSide
+    | EmptyTile,_ -> EmptySide
+    | RailTile,UP -> EmptySide
+    | RailTile,_ -> TrackSide
 
 
-let tileOptions = [UPTile;DOWNTile;LEFTTile;RIGHTTile;Empty]
-
-let superPosPrinter dataPrinter data =
-    "[" ++
-    String.concat ", " (map dataPrinter data) ++
-    "]"
+let tileOptions = [(EmptyTile,0)] @
+    map (fun x -> (RailTile,x)) [0;1;2;3]
 
 let pairPrint (x,y) = Printf.sprintf "(%d,%d)" x y
 
-let dirPrinter dir =
-    match dir with
-    | LEFT -> "LEFT"
-    | RIGHT -> "RIGHT"
-    | UP -> "UP"
-    | DOWN -> "DOWN"
 
-let tilePrinter tile =
+(* let tilePrinter tile =
     match tile with
     | UPTile -> "UP"
     | DOWNTile -> "DOWN"
     | LEFTTile -> "LEFT"
     | RIGHTTile -> "RIGHT"
-    | Empty -> "Empty"
+    | Empty -> "Empty" *)
 
 
 let initBoard =
@@ -401,7 +422,8 @@ let initBoard =
 let initGraph =
     let graph = graphFromBoard initBoard in
     let graph = makeBidir opposite graph in
-    updateNode graph (0,0) [UPTile]
+    graph
+    (* updateNode graph (0,0) [UPTile] *)
 
  (* let _ = boardPrinter initBoard
 let _ = boardPrinter (boardFromGraph initGraph)
@@ -413,41 +435,29 @@ let _ = printGraph (superPosPrinter tilePrinter) pairPrint dirPrinter initGraph 
 let _ = boardPrinter (boardFromGraph g2) *)
 
 
-let gE = computeBoard boardLenPrinter side tileOptions (100,100)
+let gE = computeBoard boardLenPrinter (get_rot_side side) tileOptions (150,150)
 (* let _ = match gE with
     | Some g -> boardPrinter (map (map (fun a -> [a])) g)
     | None -> Printf.printf "None\n" *)
 
-let tileToString tile =
+(* let tileToString tile =
     match tile with
     | UPTile -> "⊤"
     | DOWNTile -> "⊥"
     | LEFTTile -> "⊢"
     | RIGHTTile -> "⊣"
-    | Empty -> " "
+    | Empty -> " " *)
 
 
 let tileToStringBoard tile =
     map explode
     (match tile with
-    | UPTile -> 
+    | RailTile -> 
         ["   ";
-         "---";
-         " | "
+         "###";
+         " # "
          ]
-    | DOWNTile -> 
-        [" | ";
-         "---";
-         "   "]
-    | LEFTTile -> 
-        [" | ";
-         " |-";
-         " | "]
-    | RIGHTTile -> 
-        [" | ";
-         "-| ";
-         " | "]
-    | Empty -> 
+    | EmptyTile -> 
         ["   ";
          "   ";
          "   "]
@@ -482,10 +492,26 @@ let tileToStringBoard tile =
 let _ = match gE with 
         | None -> ()
         | Some b -> 
-            (boardMap tileToStringBoard b)
-            |> stringBoardBoardToString
+            (* (boardMap (render_rot_tile tileToStringBoard) b)
+            |> stringBoardBoardToString *)
+            board_render_2d_tile (render_rot_tile tileToStringBoard) b
+            |> map implode
             |> String.concat "\n"
             |> Printf.printf "%s\n"
+
+let tile_to_img t =
+    read_image (Printf.sprintf "rail/%s.png" (
+        match t with
+        | RailTile -> "rail"
+        | EmptyTile -> "empty"
+    ))
+
+let _ = match gE with 
+        | None -> ()
+        | Some b -> 
+            board_render_2d_tile (render_rot_tile tile_to_img) b
+            |> saveBMP "rail.bmp"
+
 
 (*
    SMT
