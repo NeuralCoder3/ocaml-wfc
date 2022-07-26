@@ -47,9 +47,12 @@ let extractSolution graph =
         map (fun node -> {node with data = hd node.data}) (graph.nodes) in
     { graph with nodes = singularNodes }
 
-let determineSuperposition compatible debug graph =
-    determine impossible finished (restrict compatible) collectOptions debug graph
+let determineSuperpositionRestrict restrict debug graph =
+    determine impossible finished restrict collectOptions debug graph
     |> optionMap extractSolution
+
+let determineSuperposition compatible =
+    determineSuperpositionRestrict (restrict compatible)
 
 let superPosPrinter dataPrinter data =
     "[" ++
