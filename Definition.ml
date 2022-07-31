@@ -7,3 +7,5 @@ type ('id,'info) edge = {fst : 'id; snd : 'id; info : 'info}
 type ('id,'data,'info) graph = 
     { nodes : (('id,'data) node) list;  
       edges : (('id,'info) edge) list }
+
+exception Domain

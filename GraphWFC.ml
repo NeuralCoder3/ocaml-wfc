@@ -22,24 +22,20 @@ let determine impossible finished restrict collectOptions debug =
         (* Printf.printf "Graph: \n"; *)
         debug graph;
         let options = collectOptions graph in
-        fold_left
-            (fun result option ->
-                match result with 
-                | Some r -> result
-                | None ->
-                    let id=option.id in
-                    let new_data=option.data in
-                    let new_graph = updateNode graph id new_data in
-                    let propagated = propagate restrict new_graph id in
-                    if impossible propagated then 
-                        None
-                    else 
-                        if finished propagated then
-                            Some propagated
-                        else
-                            determine_graph propagated
+        first
+            (fun option ->
+                let id=option.id in
+                let new_data=option.data in
+                let new_graph = updateNode graph id new_data in
+                let propagated = propagate restrict new_graph id in
+                if impossible propagated then 
+                    None
+                else 
+                    if finished propagated then
+                        Some propagated
+                    else
+                        determine_graph propagated
             )
-            None
             options
     in
         determine_graph

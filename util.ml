@@ -2,8 +2,8 @@
 let comp = compare;;
 let _ = Random.self_init ()
 let (<<) f g x = f(g(x))
-exception Domain
-let optionMap f opt =
+
+let option_map f opt =
     match opt with
     | Some x -> Some (f x)
     | None -> None
@@ -46,3 +46,5 @@ let connect_lines xs =
 let shuffle xs = 
     let rand = map (fun d -> (Random.bits (),d)) xs in
     map snd (sort (fun (a,_) (b,_) -> Int.compare a b) rand)
+
+let first f xs = find_map f xs

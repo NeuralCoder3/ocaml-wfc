@@ -77,4 +77,4 @@ let computeBoard debug side options (w,h) =
     let uni_graph = graphFromBoard board in
     let graph = makeBidir opposite uni_graph in
     determineSuperposition (compatible side) (fun g -> debug (boardFromGraph g)) graph
-    |> optionMap boardFromGraph
+    |> option_map boardFromGraph
