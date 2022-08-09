@@ -5,6 +5,7 @@
 #use "RotateTile.ml";;
 
 let folder = "circuit"
+let folder = "WaveFunctionCollapse/tiles/mondriaan"
 
 let tileNames = 
   Sys.readdir folder
@@ -20,16 +21,17 @@ let images = map
 
 let ids = mapi (fun i _ -> i) tileNames
 
+(* sides as they are *)
 let side id dir =
     let img = nth images id in
     let (w, h) = dimensions img in
     match dir with
     | UP -> hd img
     | RIGHT -> map (fun row -> nth row (w-1)) img
-    | DOWN -> rev(nth img (h-1))
-    | LEFT -> rev(map (List.hd) img)
-        (* hd (transpose img) *)
+    | DOWN -> nth img (h-1)
+    | LEFT -> map (List.hd) img
 
+(* rotation is a tile property (rot tile indistinguishable from copied, rotated tile) *)
 let tileOptions = 
     map 
     (fun id ->
@@ -45,21 +47,7 @@ let tileOptions =
 let tile_to_img id =
     nth images id
 
-
-    (* TODO: unify with BoardWFC *)
-let compatibleRot side s dir t =
-    side s dir = rev(side t (opposite dir))
-
-let computeBoardRot debug side options (w,h) =
-    let board = List.init h (fun _ -> List.init w (fun _ -> 
-        options
-    )) in
-    let uni_graph = graphFromBoard board in
-    let graph = makeBidir opposite uni_graph in
-    determineSuperposition (compatibleRot side) (fun g -> debug (boardFromGraph g)) graph
-    |> option_map boardFromGraph
-
-let gE = computeBoardRot boardLenPrinter (get_rot_side side) tileOptions (20,20)
+let gE = computeBoard boardLenPrinter (get_rot_side side) tileOptions (20,20)
 
 
 let _ = match gE with 

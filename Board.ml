@@ -32,11 +32,6 @@ let board_render_2d_tile render_tile board =
     |> map (fun xs -> connect_lines xs)
     |> concat
 
-let dimensions board = 
-    let h = List.length board in
-    let w = List.length (nth board 0) in
-    (w,h)
-
 let rotate_board xs =
     let (w,h) = dimensions xs in
     List.init w

@@ -1,0 +1,14 @@
+*.bmp
+*.png
+*.dot
+
+old/
+out/
+other/
+bin/
+.vscode
+node_modules
+
+rail/
+abstract
+Wave*/

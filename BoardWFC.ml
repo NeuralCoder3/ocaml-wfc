@@ -11,11 +11,12 @@ let dirPrinter dir =
     | RIGHT -> "RIGHT"
     | UP -> "UP"
     | DOWN -> "DOWN"
+    | TOP -> "TOP"
+    | BOTTOM -> "BOTTOM"
 
 let idFromCoordinates x y = (x,y)
 
-let graphFromBoard board =
-    let getId = idFromCoordinates in
+let graphFromBoardId getId board =
     let nodes = board
         |> mapi (fun r row -> mapi (fun c d -> {id = getId c r; data = d}) row)
         |> flatten
@@ -31,19 +32,8 @@ let graphFromBoard board =
     in
     { nodes = nodes; edges = edges }
 
-let makeBidir infoMirror graph =
-    let edges = graph.edges in
-    let edges_mirrored =
-        map (fun edge ->
-            {
-                fst = edge.snd; 
-                snd = edge.fst; 
-                info = infoMirror edge.info
-            }
-        )
-        edges
-    in
-    { graph with edges = edges @ edges_mirrored }
+let graphFromBoard =
+    graphFromBoardId idFromCoordinates
 
 
 let opposite direction =
@@ -52,6 +42,8 @@ let opposite direction =
     | RIGHT -> LEFT
     | UP -> DOWN
     | DOWN -> UP
+    | TOP -> BOTTOM
+    | BOTTOM -> TOP
 
 let boardFromGraph graph =
     let nodes = graph.nodes in
@@ -70,11 +62,14 @@ let boardFromGraph graph =
 let compatible side s dir t =
     side s dir = side t (opposite dir)
 
+let computeBoard_init debug side init =
+    let uni_graph = graphFromBoard init in
+    let graph = makeBidir opposite uni_graph in
+    determineSuperposition (compatible side) (fun g -> debug (boardFromGraph g)) graph
+    |> option_map boardFromGraph
+
 let computeBoard debug side options (w,h) =
     let board = List.init h (fun _ -> List.init w (fun _ -> 
         options
     )) in
-    let uni_graph = graphFromBoard board in
-    let graph = makeBidir opposite uni_graph in
-    determineSuperposition (compatible side) (fun g -> debug (boardFromGraph g)) graph
-    |> option_map boardFromGraph
+    computeBoard_init debug side board

@@ -12,11 +12,19 @@ let rotate s =
     | RIGHT -> DOWN
     | DOWN -> LEFT
     | LEFT -> UP
+    | _ -> raise (Domain "Only 2d is supported")
 
 let rec get_rot_side get_side (t,r) s =
-    match r with
-    | 0 -> get_side t s
-    | _ -> get_rot_side get_side (t,(r+1) mod 4) (rotate s)
+    let side = 
+        match r with
+        | 0 -> get_side t s
+        | _ -> get_rot_side get_side (t,(r+1) mod 4) (rotate s)
+    in
+    (* side read top to bottom, left to right, but rotation is clockwise *)
+    match s with
+    | LEFT | RIGHT -> rev side
+    | UP | DOWN -> side
+    | _ -> raise (Domain "Only 2d is supported")
 
 let rec render_rot_tile render (t,r) =
     match r with 

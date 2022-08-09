@@ -18,14 +18,32 @@ let toByteString n = implode << (map Char.chr) << (toBytes n)
 (* creates a byte string out of an rgb pixel tuple *)
 let pixelToString (a,b,c) = toByteString 1 c ^ toByteString 1 b ^ toByteString 1 a
 
+let dimensions board = 
+    let h = List.length board in
+    let w = List.length (nth board 0) in
+    (w,h)
+
+let extend_image image =
+    let (w,h) = dimensions image in
+    let rem = (4-(w mod 4)) mod 4 in
+    let white = (255,255,255) in
+    let extend = List.init rem (fun _ -> white) in
+    map
+    (fun row ->
+        row@(extend)
+    )
+    image
+
 (* exports an image (as list of lists of pixel tuples) to the bmp format *)
 let saveBMP filename img =
   let outchan = open_out filename in
   let output = Printf.fprintf outchan "%s" in
 
+  let img = extend_image img in
+
   let h = List.length img in
   let w = List.length (hd img) in
-  if (w*3) mod 4 <> 0 then raise Domain else
+  if (w*3) mod 4 <> 0 then raise (Domain (Printf.sprintf "Width needs to be a multiple of 4 but was %d" w)) else
   (
       output ("BM");(* BM *)
       output (toByteString 4 (w*h*3+54));(* Size *)

@@ -48,3 +48,12 @@ let shuffle xs =
     map snd (sort (fun (a,_) (b,_) -> Int.compare a b) rand)
 
 let first f xs = find_map f xs
+
+let rec makeUnique xs =
+    match xs with
+    | [] -> []
+    | x :: xs ->
+        if List.exists (fun y -> x = y) xs then
+            makeUnique xs
+        else
+            x :: makeUnique xs

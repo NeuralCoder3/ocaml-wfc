@@ -33,3 +33,17 @@ let updateNode graph id data =
     let new_nodes = replace nodes node new_node in
     let new_graph = {graph with nodes = new_nodes} in
     new_graph
+
+let makeBidir infoMirror graph =
+    let edges = graph.edges in
+    let edges_mirrored =
+        map (fun edge ->
+            {
+                fst = edge.snd; 
+                snd = edge.fst; 
+                info = infoMirror edge.info
+            }
+        )
+        edges
+    in
+    { graph with edges = edges @ edges_mirrored }
